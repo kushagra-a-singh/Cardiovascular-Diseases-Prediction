@@ -1,0 +1,8 @@
+Non_Anginal Pain
+Stable Angina (Typical Angina)
+Unstable Angina (Atypical Angina)
+Asymptomatic Heart Disease
+Left Ventricular Hypertrophy
+Myocardial Infarction (Heart Attack)
+Coronary Artery Disease (CAD)
+Hypertensive Heart Disease
