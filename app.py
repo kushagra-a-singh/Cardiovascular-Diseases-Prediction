@@ -6,22 +6,21 @@ import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load the trained models and preprocessors
+#load the trained models and preprocessors from the trained notebook
 @st.cache_resource
 def load_models():
     model = joblib.load('trained_model_checkpoints/multi_output_model.pkl')
     scaler = joblib.load('trained_model_checkpoints/scaler.pkl')
     return model, scaler
 
-# Function to calculate confidence intervals
+#function to calculate confidence intervals
 def calculate_confidence_interval(probability, n_samples=1000):
-    # Simulate a binomial distribution
     simulated = np.random.binomial(n=1, p=probability, size=n_samples)
     ci_lower = np.percentile(simulated, 2.5)
     ci_upper = np.percentile(simulated, 97.5)
     return ci_lower, ci_upper
 
-# Function to create feature columns in correct order
+#function to create feature columns in correct order
 def create_input_features(data_dict):
     columns = [
         'age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca',
@@ -35,7 +34,7 @@ def create_input_features(data_dict):
             df[col] = data_dict[col]
     return df
 
-# Function to validate input values
+#function to validate input values
 def validate_inputs(age, trestbps, chol, thalach, oldpeak):
     warnings = []
     if age < 30 or age > 77:
@@ -48,7 +47,7 @@ def validate_inputs(age, trestbps, chol, thalach, oldpeak):
         warnings.append("Maximum heart rate is outside normal range (60-220 bpm)")
     return warnings
 
-# Emergency warning signs function
+#funtion for emergency warning signs
 def check_emergency_signs(cp_typical_angina, cp_non_anginal_pain, cp_atypical_angina, trestbps, thalach):
     emergency_signs = []
     if cp_typical_angina == 1:
@@ -65,7 +64,7 @@ def check_emergency_signs(cp_typical_angina, cp_non_anginal_pain, cp_atypical_an
         emergency_signs.append("⚠️ Your heart rate is very high")
     return emergency_signs
 
-# Function to get disease-specific information
+#function to get disease-specific information
 def get_disease_info(disease_name):
     info = {
         'Non-Anginal Pain': {
@@ -119,10 +118,8 @@ def get_disease_info(disease_name):
     }
     return info.get(disease_name, {})
 
-# Set page config
 st.set_page_config(page_title="Cardiovascular Diseases Risk Assessment", layout="wide")
 
-# Custom CSS
 st.markdown("""
     <style>
     .emergency-warning {
@@ -141,14 +138,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Main title with description
 st.title('Cardiovascular Diseases Risk Assessment Tool')
 st.markdown("""
     This tool uses machine learning to assess your risk for different types of cardiovascular diseases.
     Please fill in all fields accurately for the best results.
     """)
 
-# Important medical disclaimer
 st.warning("""
     🏥 MEDICAL DISCLAIMER: This tool is for educational and screening purposes only.
     It is not a substitute for professional medical diagnosis or advice.
@@ -158,35 +153,34 @@ st.warning("""
 if 'selected_tab' not in st.session_state:
     st.session_state.selected_tab = "Input Data"
 
-# Create tabs for different sections
 tabs = st.tabs(["Input Data", "Results & Analysis", "Information"])
 
-with tabs[0]:  # Input Data tab
+with tabs[0]:  
     with st.form("prediction_form"):
         st.subheader("Patient Information")
         
-        # Demographic information
         col1, col2 = st.columns(2)
         with col1:
-            age = st.number_input("Age", min_value=29, max_value=77, value=50, help="Patient's age in years")
-            sex = st.selectbox("Sex", ["Female", "Male"], help="Biological sex")
+            age = st.number_input("Age", min_value=29, max_value=77, value=50, 
+                                help="Enter your current age. This is crucial for accurate risk assessment.")
+            sex = st.selectbox("Biological Sex", ["Female", "Male"], 
+                             help="Select your biological sex at birth. This affects how risk factors are evaluated.")
             
         with col2:
-            trestbps = st.number_input("Resting Blood Pressure (mm Hg)", min_value=94, max_value=200, value=120,
-                                     help="Resting blood pressure in millimeters of mercury")
-            chol = st.number_input("Serum Cholesterol (mg/dl)", min_value=126, max_value=564, value=200,
-                                 help="Serum cholesterol level in mg/dl")
+            trestbps = st.number_input("Resting Blood Pressure(mm Hg)", min_value=94, max_value=200, value=120,
+                                     help="Your blood pressure when at rest, measured in mm Hg. For accurate results, take after sitting quietly for 5 minutes.")
+            chol = st.number_input("Total Cholesterol Level(mg/dl)", min_value=126, max_value=564, value=200,
+                                 help="Your total cholesterol level from your most recent blood test (in mg/dl). If unsure, consult your latest lab results.")
 
-        # Clinical features
         st.subheader("Clinical Information")
         col3, col4 = st.columns(2)
         with col3:
-            cp = st.selectbox("Chest Pain Type", 
+            cp = st.selectbox("Type of Chest Pain", 
                             ["typical angina", "atypical angina", "non-anginal pain", "asymptomatic"],
-                            help="Type of chest pain experienced")
-            fbs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", 
+                            help="Select the type of chest pain you experience:\n• Typical angina: Triggered by activity, relieved by rest\n• Atypical angina: Not consistently related to activity\n• Non-anginal pain: Not heart-related\n• Asymptomatic: No chest pain")
+            fbs = st.selectbox("High Fasting Blood Sugar", 
                              ["False", "True"],
-                             help="Whether fasting blood sugar is greater than 120 mg/dl")
+                             help="Select 'True' if your fasting blood sugar is above 120 mg/dl. This is typically measured after not eating for 8 hours.")
             
         with col4:
             restecg = st.selectbox("Resting ECG Results",
@@ -196,37 +190,34 @@ with tabs[0]:  # Input Data tab
                                     min_value=71, max_value=202, value=150,
                                     help="Maximum heart rate achieved during exercise")
 
-        # Additional clinical features
         col5, col6 = st.columns(2)
         with col5:
-            exang = st.selectbox("Exercise Induced Angina",
+            exang = st.selectbox("Chest Pain During Exercise",
                                ["No", "Yes"],
-                               help="Whether exercise induces angina")
-            oldpeak = st.number_input("ST Depression (oldpeak)",
+                               help="Select 'Yes' if you experience chest pain or discomfort during physical activity.")
+            oldpeak = st.number_input("ST Depression",
                                     min_value=0.0, max_value=6.2, value=1.0,
-                                    help="ST depression induced by exercise relative to rest")
+                                    help="ST depression value from your exercise stress test. If you haven't had a stress test, leave at default value.")
             
         with col6:
-            slope = st.selectbox("ST Slope",
+            slope = st.selectbox("ST Segment Slope",
                                ["up", "flat", "down"],
-                               help="Slope of the peak exercise ST segment")
-            ca = st.number_input("Number of Major Vessels (0-4)",
+                               help="The slope of the ST segment on your exercise ECG:\n• Up: Upsloping\n• Flat: Horizontal\n• Down: Downsloping\nIf unsure, check your latest stress test report.")
+            ca = st.number_input("Number of Vessels",
                                min_value=0, max_value=4, value=0,
-                               help="Number of major vessels colored by fluoroscopy")
+                               help="Number of major heart blood vessels showing calcium buildup in fluoroscopy. This comes from a cardiac catheterization or calcium scoring test.")
 
-        thal = st.selectbox("Thalassemia",
+        thal = st.selectbox("Thallium Test Result",
                           ["normal", "fixed defect", "reversible defect"],
-                          help="Results of thallium stress test")
+                          help="Result from your thallium stress test:\n• Normal: No defects\n• Fixed defect: Permanent abnormality\n• Reversible defect: Temporary abnormality\nIf you haven't had this test, select 'normal'.")
         
         submitted = st.form_submit_button("Analyze Risk")
 
-# Handle form submission
+#handling form submission
 if submitted:
     st.session_state.analysis_completed = True
-    # Load the model and scaler
     model, scaler = load_models()
     
-    # Validate inputs
     warnings = validate_inputs(age, trestbps, chol, thalach, oldpeak)
     if warnings:
         st.warning("⚠️ Potential input concerns:")
@@ -234,7 +225,6 @@ if submitted:
             st.write(f"- {warning}")
 
     try:
-        # Create input dictionary and features
         input_dict = {
             'age': [age],
             'trestbps': [trestbps],
@@ -257,17 +247,14 @@ if submitted:
         }
         input_data = create_input_features(input_dict)
         
-        # Scale numerical features
         numerical_columns = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']
         input_data[numerical_columns] = scaler.transform(input_data[numerical_columns])
 
-        # Make prediction
         prediction = model.predict(input_data)
-        prediction_proba = model.predict_proba(input_data)  # Get probabilities for all diseases
+        prediction_proba = model.predict_proba(input_data)
 
-        # Store results in session state
         st.session_state.prediction = prediction
-        st.session_state.prediction_proba = prediction_proba  # Store probabilities
+        st.session_state.prediction_proba = prediction_proba
         st.session_state.input_data = input_data
         st.session_state.model = model
         st.session_state.selected_tab = "Results & Analysis"
@@ -277,9 +264,8 @@ if 'analysis_completed' in st.session_state and st.session_state.analysis_comple
     with tabs[0]:
         st.success("Risk assessment complete, please checkout **RESULTS & ANALYSIS** tab for results")
 
-with tabs[1]:  # Results & Analysis tab
+with tabs[1]:
     if st.session_state.selected_tab == "Results & Analysis" and 'prediction' in st.session_state:
-        # Check for emergency signs
         emergency_signs = check_emergency_signs(
             st.session_state.input_data['cp_typical_angina'][0],
             st.session_state.input_data['cp_atypical_angina'][0],
@@ -295,7 +281,6 @@ with tabs[1]:  # Results & Analysis tab
                 st.write(sign)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Define disease types in the same order as they were created during training
         disease_types = [
             'Non-Anginal Pain',
             'Stable Angina (Typical Angina)',
@@ -311,12 +296,11 @@ with tabs[1]:  # Results & Analysis tab
         prediction = st.session_state.prediction
         prediction_proba = st.session_state.prediction_proba
         
-        # Create a grid layout for the results (2 rows, 4 columns)
         num_diseases = len(disease_types)
         rows = (num_diseases // 4) + (1 if num_diseases % 4 > 0 else 0)
 
         for row in range(rows):
-            result_cols = st.columns(4)  # Always 4 columns
+            result_cols = st.columns(4)
             start_idx = row * 4
             end_idx = min(start_idx + 4, num_diseases)
             
@@ -325,7 +309,7 @@ with tabs[1]:  # Results & Analysis tab
                 disease = disease_types[i]
                 
                 with result_cols[col_idx]:
-                    probability = prediction_proba[i][0][1]  # Get probability of class 1
+                    probability = prediction_proba[i][0][1]
                     ci_lower, ci_upper = calculate_confidence_interval(probability)
                     risk_level = "High Risk" if probability > 0.5 else "Low Risk"
                     
@@ -338,7 +322,6 @@ with tabs[1]:  # Results & Analysis tab
                     st.progress(probability)
                     st.write(f"95% CI: {ci_lower:.1%} - {ci_upper:.1%}")
 
-                    # Add expander for detailed disease information
                     with st.expander(f"Learn more about {disease}"):
                         disease_info = get_disease_info(disease)
                         
@@ -372,59 +355,48 @@ with tabs[1]:  # Results & Analysis tab
                         else:
                             st.write("Detailed information not available for this condition.")
 
-        # Feature importance analysis
         st.subheader("Key Factors Influencing the Prediction")
 
         try:
-            # Get model and input data from session state
             model = st.session_state.model
             input_data = st.session_state.input_data
             
-            # Find first disease with high risk if any
+            #finding first disease with high risk if any
             high_risk_idx = None
             for i, proba in enumerate(st.session_state.prediction_proba):
                 if proba[0][1] > 0.5:
                     high_risk_idx = i
                     break
             
-            # If no high risk, use first disease
+            #if no high risk, use another disease
             if high_risk_idx is None:
                 disease_idx = 0
             else:
                 disease_idx = high_risk_idx
-            
-            # Display which disease we're showing factors for
+            #getting the feature importance plot
             st.write(f"Showing factors for: **{disease_types[disease_idx]}**")
             
-            # Get the estimator for the selected disease
             if disease_idx < len(model.estimators_):
                 estimator = model.estimators_[disease_idx]
                 
-                # Get feature importances directly from the random forest
+                #get feature importances directly from the random forest
                 importances = estimator.feature_importances_
                 feature_names = list(input_data.columns)
                 
-                # Create a dataframe for the feature importances
                 importance_df = pd.DataFrame({
                     'Feature': feature_names,
                     'Importance': importances
                 })
                 
-                # Sort by importance
                 importance_df = importance_df.sort_values('Importance', ascending=False).head(10)
-                
-                # Create the plot
                 plt.figure(figsize=(10, 6))
                 
-                # Create barplot
                 ax = sns.barplot(x='Importance', y='Feature', data=importance_df)
                 
-                # Add labels and title
                 plt.title(f'Feature Importance for {disease_types[disease_idx]}')
                 plt.xlabel('Importance')
                 plt.ylabel('Feature')
                 
-                # Display the plot
                 col1, col2, col3 = st.columns([1, 3, 1])
                 with col2:
                     st.pyplot(plt.gcf())
@@ -442,7 +414,6 @@ with tabs[1]:  # Results & Analysis tab
             st.error(f"Error generating feature importance plot: {e}")
             st.write("We're unable to show the detailed feature analysis at this time.")
 
-        # Detailed interpretation
         st.subheader("Result Interpretation")
         st.write("""
         #### Risk Levels Explained:
@@ -455,7 +426,7 @@ with tabs[1]:  # Results & Analysis tab
         - Regular check-ups are important regardless of risk level
         """)
 
-        # Recommendations based on risk levels
+        #recommendations based on risk levels
         st.subheader("Recommendations")
         if any(proba[0][1] > 0.5 for proba in st.session_state.prediction_proba):
             st.error("""
@@ -474,10 +445,8 @@ with tabs[1]:  # Results & Analysis tab
             4. Follow your doctor's preventive care recommendations
             """)
         
-        # Lifestyle recommendations
         st.subheader("Lifestyle Recommendations")
 
-        # Get the highest risk disease
         max_risk_idx = 0
         max_risk_prob = 0
         for i, proba in enumerate(st.session_state.prediction_proba):
@@ -488,7 +457,6 @@ with tabs[1]:  # Results & Analysis tab
         high_risk_disease = disease_types[max_risk_idx]
         disease_info = get_disease_info(high_risk_disease)
 
-        # General recommendations
         st.write("#### General Heart Health Recommendations:")
         st.markdown("""
         - **Physical Activity**: Aim for at least 150 minutes of moderate exercise per week
@@ -500,13 +468,12 @@ with tabs[1]:  # Results & Analysis tab
         - **Regular Check-ups**: Schedule routine visits with your healthcare provider
         """)
 
-        # Specific recommendations based on highest risk
         if disease_info and disease_info.get('prevention'):
             st.write(f"#### Specific Recommendations for {high_risk_disease}:")
             for tip in disease_info.get('prevention'):
                 st.write(f"• {tip}")
 
-with tabs[2]:  # Information tab
+with tabs[2]:
     st.subheader("About This Tool")
     st.write("""
     #### How It Works
@@ -576,7 +543,6 @@ with tabs[2]:  # Information tab
     5. **Reassess periodically**: Consider retaking this assessment every 6-12 months
     """)
 
-# Sidebar with additional information
 st.sidebar.title("About")
 st.sidebar.info("""
 This tool uses advanced machine learning to assess cardiovascular diseases risk based on clinical data.
@@ -591,7 +557,6 @@ Key Features:
 Remember: This is a screening tool only and should not replace professional medical advice.
 """)
 
-# Add health resources to sidebar
 st.sidebar.title("Health Resources")
 st.sidebar.markdown("""
 #### Emergency Resources
