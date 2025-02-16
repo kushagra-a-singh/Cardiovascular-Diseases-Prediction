@@ -565,7 +565,6 @@ st.sidebar.markdown("""
 - [Heart Disease Information (CDC)](https://www.cdc.gov/heartdisease/)
 
 #### Tools for Heart Health
-- [Heart Risk Calculator (ACC/AHA)](https://www.cvriskcalculator.com/)
 - [Blood Pressure Chart](https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings)
 - [BMI Calculator](https://www.nhlbi.nih.gov/health/educational/lose_wt/BMI/bmicalc.htm)
 """)
@@ -573,7 +572,7 @@ st.sidebar.markdown("""
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 ### Created by:
-[Kushagra Singh](https://github.com/kushagra-a-singh/Cardiovascular-Diseases-Prediction)
+[Kushagra Singh](https://www.linkedin.com/in/kushagra-anit-singh/)
 
 © 2025 All Rights Reserved
 """)
