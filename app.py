@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.graph_objects as go
 
 #load the trained models and preprocessors from the trained notebook
 @st.cache_resource
@@ -53,11 +53,9 @@ def check_emergency_signs(cp_typical_angina, cp_non_anginal_pain, cp_atypical_an
     if cp_typical_angina == 1:
         emergency_signs.append("⚠️ You reported typical chest pain (angina)")
     if cp_non_anginal_pain == 1:
-        emergency_signs.append("⚠️ You reported non-anginal pain")
-    if cp_atypical_angina == 1:
         emergency_signs.append("⚠️ You reported atypical chest pain (angina)")
-    if trestbps < 120:
-        emergency_signs.append("⚠️ Your blood pressure is low")
+    if cp_atypical_angina == 1:
+        emergency_signs.append("⚠️ You reported non-anginal pain")
     if trestbps > 180:
         emergency_signs.append("⚠️ Your blood pressure is very high")
     if thalach > 200:
@@ -378,8 +376,6 @@ with tabs[1]:
             
             if disease_idx < len(model.estimators_):
                 estimator = model.estimators_[disease_idx]
-                
-                #get feature importances directly from the random forest
                 importances = estimator.feature_importances_
                 feature_names = list(input_data.columns)
                 
@@ -387,32 +383,129 @@ with tabs[1]:
                     'Feature': feature_names,
                     'Importance': importances
                 })
+                importance_df = importance_df[importance_df['Feature'] != 'cp_non_anginal_pain']
                 
-                importance_df = importance_df.sort_values('Importance', ascending=False).head(10)
-                plt.figure(figsize=(10, 6))
+                #sorted and get top 10
+                importance_df = importance_df.sort_values('Importance', ascending=True).tail(10)
                 
-                ax = sns.barplot(x='Importance', y='Feature', data=importance_df)
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=importance_df['Importance'],
+                    y=importance_df['Feature'],
+                    orientation='h',
+                    marker=dict(
+                        color=importance_df['Importance'],
+                        colorscale='Viridis',
+                        showscale=True
+                    )
+                ))
                 
-                plt.title(f'Feature Importance for {disease_types[disease_idx]}')
-                plt.xlabel('Importance')
-                plt.ylabel('Feature')
+                fig.update_layout(
+                    title=f'Top 10 Important Features for {disease_types[disease_idx]}',
+                    xaxis_title='Feature Importance',
+                    yaxis_title='Feature',
+                    height=500,
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    yaxis={'categoryorder':'total ascending'}
+                )
                 
-                col1, col2, col3 = st.columns([1, 3, 1])
-                with col2:
-                    st.pyplot(plt.gcf())
-                plt.close()
+                fig.update_traces(
+                    hovertemplate="<b>%{y}</b><br>" +
+                    "Importance: %{x:.3f}<br>" +
+                    "<extra></extra>"
+                )
                 
+                st.plotly_chart(fig, use_container_width=True)
                 st.markdown("""
-                **Understanding the Feature Importance Plot:**
-                - Each bar shows how much a feature influences the prediction
-                - Longer bars indicate stronger impact on the risk assessment
-                - Features are ordered by their importance (most important at top)
-                - This analysis helps identify which factors are most relevant for your assessment
+                **Understanding the Feature Importance Bar Chart:**
+                - Longer bars indicate stronger influence on predictions
+                - Color intensity corresponds to importance level
+                - Hover over bars for exact values
                 """)
             
+            #generating synthetic data based on input features
+            sample_data = pd.DataFrame()
+            n_samples = 100
+            for col in input_data.columns:
+                if col in ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']:
+                    #for numerical columns
+                    mean_val = float(input_data[col].iloc[0])
+                    std_val = max(mean_val * 0.1, 1)
+                    sample_data[col] = np.random.normal(mean_val, std_val, n_samples)
+                else:
+                    #for binary columns
+                    prob = float(input_data[col].iloc[0])
+                    sample_data[col] = np.random.binomial(1, prob, n_samples)
+            
+            correlation_matrix = sample_data.corr()
+
+            #filter correlation matrix to only include numerical columns
+            numerical_cols = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
+            filtered_correlation_matrix = correlation_matrix.loc[numerical_cols, numerical_cols]
+
+            fig = go.Figure(data=go.Heatmap(
+                z=filtered_correlation_matrix.values,
+                x=filtered_correlation_matrix.columns,
+                y=filtered_correlation_matrix.columns,
+                colorscale='RdBu_r',
+                zmid=0,
+                text=np.round(filtered_correlation_matrix.values, 2),
+                texttemplate='%{text}',
+                textfont={"size": 12},
+                hoverongaps=False,
+            ))
+
+            fig.update_layout(
+                title={
+                    'text': 'Feature Correlation Matrix',
+                    'y': 0.95,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top',
+                    'font': {'size': 20}
+                },
+                width=800,
+                height=800,
+                xaxis={
+                    'tickangle': 45,
+                    'side': 'bottom',
+                    'tickfont': {'size': 12}
+                },
+                yaxis={
+                    'tickfont': {'size': 12}
+                },
+                margin=dict(t=100, l=100, r=100, b=100)
+            )
+
+            fig.update_traces(
+                colorbar={
+                    'title': 'Correlation',
+                    'titleside': 'right',
+                    'thickness': 20,
+                    'len': 0.8,
+                    'tickformat': '.2f',
+                    'tickfont': {'size': 12},
+                    'titlefont': {'size': 14}
+                },
+                showscale=True
+            )
+
+            st.plotly_chart(fig, use_container_width=False)
+            st.markdown("""
+            **Understanding the Correlation Matrix:**
+            - Strong Positive Correlation (Dark Blue): Values close to +1
+            - Strong Negative Correlation (Dark Red): Values close to -1
+            - No Correlation (White): Values close to 0
+            - Diagonal Values: Always 1.0 (perfect self-correlation)
+
+            **Note**: Hover over cells to see exact correlation values. This matrix shows correlations only between numerical features.
+            """)
+
         except Exception as e:
-            st.error(f"Error generating feature importance plot: {e}")
-            st.write("We're unable to show the detailed feature analysis at this time.")
+            st.error(f"Error generating correlation matrix: {str(e)}")
+            st.write("Debug info:")
+            st.write("Input data shape:", input_data.shape)
+            st.write("Input data columns:", input_data.columns.tolist())
 
         st.subheader("Result Interpretation")
         st.write("""
