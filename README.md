@@ -1,6 +1,6 @@
 # Cardiovascular Diseases Prediction
 
-![Project Banner](plots/gui.png)
+![Project Banner](plots/gui.jpg)
 
 ## Table of Contents
 - [Project Overview](#project-overview)
