@@ -477,14 +477,16 @@ with tabs[1]:
             )
 
             fig.update_traces(
-                colorbar={
-                    'title': 'Correlation',
-                    'thickness': 20,
-                    'len': 0.8,
-                    'tickformat': '.2f',
-                    'tickfont': {'size': 12},
-                    'titlefont': {'size': 14}
-                },
+                colorbar=dict(
+                    title=dict(
+                        text='Correlation',
+                        font=dict(size=14)
+                    ),
+                    thickness=20,
+                    len=0.8,
+                    tickformat='.2f',
+                    tickfont=dict(size=12)
+                ),
                 showscale=True
             )
 
