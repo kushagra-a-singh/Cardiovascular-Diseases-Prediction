@@ -464,8 +464,7 @@ with tabs[1]:
                     'yanchor': 'top',
                     'font': {'size': 20}
                 },
-                width=800,
-                height=800,
+                height=600,
                 xaxis={
                     'tickangle': 45,
                     'side': 'bottom',
@@ -474,13 +473,12 @@ with tabs[1]:
                 yaxis={
                     'tickfont': {'size': 12}
                 },
-                margin=dict(t=100, l=100, r=100, b=100)
+                margin=dict(l=50, r=50, t=80, b=50)
             )
 
             fig.update_traces(
                 colorbar={
                     'title': 'Correlation',
-                    'titleside': 'right',
                     'thickness': 20,
                     'len': 0.8,
                     'tickformat': '.2f',
@@ -490,7 +488,7 @@ with tabs[1]:
                 showscale=True
             )
 
-            st.plotly_chart(fig, use_container_width=False)
+            st.plotly_chart(fig, use_container_width=True)
             st.markdown("""
             **Understanding the Correlation Matrix:**
             - Strong Positive Correlation (Dark Blue): Values close to +1
